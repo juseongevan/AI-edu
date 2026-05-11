@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── 기존 갤러리 entries 컬렉션 (유지) ──────────────────────────
+    match /entries/{entryId} {
+      allow read: if true;
+      allow create: if
+        request.resource.data.keys().hasAll([
+          'name', 'organization', 'serviceName',
+          'purpose', 'password', 'createdAt', 'claudeCode'
+        ])
+        && !('verified'  in request.resource.data)
+        && !('adminMemo' in request.resource.data)
+        && request.resource.data.name.size()         > 0
+        && request.resource.data.name.size()         <= 50
+        && request.resource.data.organization.size() > 0
+        && request.resource.data.serviceName.size()  > 0
+        && request.resource.data.purpose.size()      > 0
+        && request.resource.data.password.size()     >= 4;
+      allow update: if resource.data != null;
+      allow delete: if resource.data != null;
+    }
+
+    // ─── 채용 플랫폼: 사용자 프로필 ────────────────────────────────
+    match /users/{userId} {
+      // 본인 프로필 읽기/쓰기 허용. 관리자는 전체 읽기 가능.
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── 채용 플랫폼: 채용 공고 ────────────────────────────────────
+    match /jobs/{jobId} {
+      // 승인된 공고는 누구나 읽기 가능
+      allow read:   if true;
+      // 로그인한 기업 회원만 등록 가능
+      allow create: if request.auth != null
+                    && request.resource.data.companyId == request.auth.uid;
+      // 본인 공고만 수정 가능
+      allow update: if request.auth != null
+                    && (resource.data.companyId == request.auth.uid
+                        || isAdmin(request.auth.uid));
+      // 본인 공고만 삭제 가능
+      allow delete: if request.auth != null
+                    && resource.data.companyId == request.auth.uid;
+    }
+
+    // ─── 채용 플랫폼: 지원서 ───────────────────────────────────────
+    match /applications/{appId} {
+      // 구직자(본인) 또는 해당 공고 기업만 읽기 가능
+      allow read:   if request.auth != null;
+      // 로그인한 사용자만 지원 등록
+      allow create: if request.auth != null
+                    && request.resource.data.seekerId == request.auth.uid;
+      // 기업이 상태 변경 가능
+      allow update: if request.auth != null;
+    }
+
+    // ─── 채용 플랫폼: 베네핏 ───────────────────────────────────────
+    match /benefits/{benefitId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.seekerId == request.auth.uid;
+      allow update: if request.auth != null;
+    }
+
+    // ─── 그 외 컬렉션 차단 ─────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+
+  // 관리자 판별 헬퍼 (추후 Custom Claims 으로 교체 권장)
+  function isAdmin(uid) {
+    return false; // Firebase Console에서 Custom Claims로 관리자 설정 권장
+  }
+}

@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 프로젝트 파일 (HTML) 및 썸네일 이미지
+    match /projects/{fileName} {
+      allow read: if true;
+      allow write: if request.resource.size < 10 * 1024 * 1024; // 10MB 제한
+    }
+    match /thumbnails/{fileName} {
+      allow read: if true;
+      allow write: if request.resource.size < 5 * 1024 * 1024   // 5MB 제한
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

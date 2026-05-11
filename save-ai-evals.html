@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>AI 평가 저장</title>
+<style>
+  body { font-family: monospace; background: #0a0a1a; color: #f0f0ff; padding: 32px; }
+  pre  { background: #111128; padding: 16px; border-radius: 8px; white-space: pre-wrap; }
+  .ok  { color: #22c55e; } .err { color: #f87171; }
+  button { padding: 12px 28px; background: #7c3aed; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+  button:hover { background: #8b5cf6; }
+</style>
+</head>
+<body>
+<h2>🤖 AI 평가 Firestore 저장</h2>
+<button onclick="run()">저장 시작</button>
+<pre id="log">버튼을 누르면 시작합니다.</pre>
+
+<script>
+const API_KEY = 'AIzaSyCBpgDMWtyImucD9PcI-pVlsfUYcDxY38o'
+const PROJECT = 'vibecoding02'
+const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/entries`
+
+const evaluations = {
+  '3xMYMnsBgMOlIzxLe699': `[AI 평가] 2026-04-13
+✅ UI/UX: Notion DB 뷰로 데이터 구조화 — 가독성 양호
+✅ 목적 부합: 점포 주변 3km 상권 시세 DB 구축 의도 명확
+⚠️ 기술 수준: Notion 노코드 활용 (크롤링·API 연동 계획은 고도화 여지)
+💡 바이브코딩: AI를 활용해 데이터 수집 파이프라인 설계 시도
+📊 종합 ★★★☆☆ — 실무 목적 명확하고 팀 공유 구조 우수. 크롤링·자동화 구현 심화 시 더욱 강력해질 것`,
+
+  'EOUjNTn4MGcLqBUEVTtZ': `[AI 평가] 2026-04-13
+⚠️ UI/UX: 제목 외 콘텐츠 미로딩 — 페이지 완성 전 배포 상태로 보임
+⚠️ 목적 부합: 물류 조회·대시보드 컨셉은 유효하나 실제 구현 미확인
+❌ 기술 수준: 현재 접속 기준 콘텐츠 거의 없음
+💡 바이브코딩: 수출입 정보 통합 포털 아이디어 자체의 실무 가치 높음
+📊 종합 ★★☆☆☆ — 개념은 훌륭하나 배포 완성도 보완 필요. URL 재확인 권장`,
+
+  'KTEk5gG0V7FYfTkjdy3U': `[AI 평가] 2026-04-13
+✅ UI/UX: Glassmorphism 다크모드 디자인 — 세련된 완성도
+✅ 목적 부합: 전문과정 포트폴리오 등록·관리 목적 완벽 구현
+✅ 기술 수준: React + Firebase 실시간 연동, 반응형, 보안 Rules까지 적용
+💡 바이브코딩: Claude Code로 전체 스택 구현 — 관리자 패널·보안룰까지 포함
+📊 종합 ★★★★★ — 기획·디자인·기술 균형 잡힌 완성작. 과정 홍보 도구로 즉시 활용 가능`,
+
+  'NDKlvLI0egcHH2VBtI7x': `[AI 평가] 2026-04-13
+✅ UI/UX: Expo 기반 모바일 앱 — 현장 중심 UX 설계 의도 파악
+✅ 목적 부합: 픽스 점장 업무 디지털화 방향 적절
+⚠️ 기술 수준: React Native/Expo 활용 — 모바일 앱 도전 자체가 높은 난이도
+💡 바이브코딩: AI로 모바일 앱까지 구현 (대부분이 웹에 그치는 것과 차별화)
+📊 종합 ★★★☆☆ — 모바일 앱 도전에 가점. 실제 앱 실행 및 기능 확인 필요`,
+
+  'Q1vWdmnYSgfQkBFuSwCg': `[AI 평가] 2026-04-13
+✅ UI/UX: 4탭 구조(점검·순위·현황·교육) — 매우 직관적이고 완성도 높음
+✅ 목적 부합: 매장 자가점검·피드백·교육 목적 완벽 구현
+✅ 기술 수준: Claude API 이미지 자동채점 + 트렌드 분석 + 포디엄 순위 UI
+💡 바이브코딩: AI 채점 기능 내장으로 바이브코딩 정신 그 자체. 50개 항목 체계화
+📊 종합 ★★★★★ — 이번 과정 최고 완성작 중 하나. 현업 즉시 투입 가능 수준`,
+
+  'kWLBryfsp9PrIU3x1sM3': `[AI 평가] 2026-04-13
+⚠️ UI/UX: 배포 URL 미제출로 직접 확인 불가
+✅ 목적 부합: 고객 현황(구매·재구매·연령·사이즈) 분석 컨셉 실무 유용
+💡 바이브코딩: 데이터 분석 대시보드는 AI 코딩의 강점 영역
+📊 종합 ★★★☆☆ — URL 제출 시 재평가 예정. 아이디어 자체는 실무 가치 높음`,
+
+  'lUVKihnfGUugIVO6lYal': `[AI 평가] 2026-04-13
+⚠️ UI/UX: PWA 설정은 확인되나 실제 UI 콘텐츠 로딩 미확인
+✅ 목적 부합: 점포 현장 체크리스트 모바일화 방향 적절
+⚠️ 기술 수준: PWA 기반 오프라인 지원 시도 (의도는 좋으나 배포 완성도 낮음)
+💡 바이브코딩: 모바일 현장 업무 툴 방향성은 실용적
+📊 종합 ★★☆☆☆ — 컨셉은 우수하나 현재 접속 기준 완성도 보완 필요. URL 재확인 권장`,
+
+  'yZc3oLfYxDCGz6Doua04': `[AI 평가] 2026-04-13
+✅ UI/UX: 사이드바·카드·테이블 조합 — 데이터 중심 UI 잘 구성됨
+✅ 목적 부합: 수기 분배 자동화 목적 완벽 달성 (초도·반응 분배 로직 내장)
+✅ 기술 수준: XLSX 파싱·날씨 가중치·요일별 가중치·SAP 업로드용 엑셀 출력 탁월
+💡 바이브코딩: 복잡한 비즈니스 로직을 AI와 함께 구현한 수작. 실무 자동화 ROI 명확
+📊 종합 ★★★★☆ — 실무 임팩트 최고 수준. 에러 처리·입력 검증 보완 시 ★★★★★`,
+}
+
+const log = document.getElementById('log')
+function print(msg, cls) {
+  const span = document.createElement('span')
+  span.className = cls || ''
+  span.textContent = msg + '\n'
+  log.appendChild(span)
+}
+
+async function run() {
+  log.innerHTML = ''
+  print('저장 시작...\n')
+  let ok = 0, fail = 0
+  for (const [id, text] of Object.entries(evaluations)) {
+    try {
+      const url = `${BASE}/${id}?key=${API_KEY}&updateMask.fieldPaths=aiMemo`
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { aiMemo: { stringValue: text } } })
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      print(`✅ 저장 완료: ${id}`, 'ok')
+      ok++
+    } catch (e) {
+      print(`❌ 실패: ${id} — ${e.message}`, 'err')
+      fail++
+    }
+  }
+  print(`\n완료! 성공 ${ok}건 / 실패 ${fail}건`)
+}
+</script>
+</body>
+</html>
